@@ -1,19 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-/// Simple Cloudinary helper for client-side unsigned uploads.
-///
-/// IMPORTANT: Configure these values for your own Cloudinary account:
-/// - [cloudName]: your Cloudinary cloud name
-/// - [uploadPreset]: an unsigned upload preset restricted to a folder
-///
-/// In Cloudinary Console:
-/// 1. Go to Settings > Upload > Upload presets.
-/// 2. Create a new preset with `Signing mode` = Unsigned.
-/// 3. Restrict allowed formats and max size, and optionally force a folder.
-/// 4. Copy the preset name into [uploadPreset] below.
 class CloudinaryService {
   CloudinaryService._();
 
@@ -25,9 +14,10 @@ class CloudinaryService {
   static const String _apiBase = 'https://api.cloudinary.com/v1_1';
 
   Future<CloudinaryUploadResult> uploadImage({
-    required File file,
+    required Uint8List bytes,
     required String folder,
     required String publicId,
+    required String fileName,
   }) async {
    
     if (cloudName.isEmpty || uploadPreset.isEmpty) {
@@ -42,7 +32,11 @@ class CloudinaryService {
       ..fields['upload_preset'] = uploadPreset
       ..fields['folder'] = folder
       ..fields['public_id'] = publicId
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: fileName,
+      ));
 
     final response = await request.send();
     final body = await response.stream.bytesToString();

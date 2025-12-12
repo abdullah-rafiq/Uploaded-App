@@ -1,7 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -46,14 +44,15 @@ class _WorkerVerificationPageState extends State<WorkerVerificationPage> {
     try {
       final picked = await _picker.pickImage(source: ImageSource.camera);
       if (picked == null) return;
-
-      final file = File(picked.path);
+      final bytes = await picked.readAsBytes();
+      final fileName = picked.name;
 
       // Upload via Cloudinary and store URL/publicId in the corresponding user fields.
       final result = await CloudinaryService.instance.uploadImage(
-        file: file,
+        bytes: bytes,
         folder: 'worker_verification/${user.uid}',
         publicId: field,
+        fileName: fileName,
       );
       final url = result.secureUrl;
 

@@ -1,7 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -966,8 +964,8 @@ Future<void> _changeProfileImage(BuildContext context, String uid) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
-
-    final file = File(picked.path);
+    final bytes = await picked.readAsBytes();
+    final fileName = picked.name;
 
     // Show loading SnackBar
     final loadingSnack = SnackBar(
@@ -983,7 +981,11 @@ Future<void> _changeProfileImage(BuildContext context, String uid) async {
     ScaffoldMessenger.of(context).showSnackBar(loadingSnack);
 
     // Upload via UserService (Cloudinary under the hood) and update Firestore
-    final uploadResult = await UserService.instance.uploadProfileImage(uid, file);
+    final uploadResult = await UserService.instance.uploadProfileImage(
+      uid,
+      bytes,
+      fileName,
+    );
     await UserService.instance.updateProfileImageUrl(uid, uploadResult.secureUrl);
     // Optionally store Cloudinary public_id for future management
     await UserService.instance.updateUser(uid, {

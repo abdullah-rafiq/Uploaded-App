@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -31,11 +31,13 @@ class UserService {
     });
   }
 
-  Future<CloudinaryUploadResult> uploadProfileImage(String uid, File file) async {
+  Future<CloudinaryUploadResult> uploadProfileImage(
+      String uid, Uint8List bytes, String fileName) async {
     final result = await CloudinaryService.instance.uploadImage(
-      file: file,
+      bytes: bytes,
       folder: 'user_profile_images',
       publicId: uid,
+      fileName: fileName,
     );
     return result;
   }
