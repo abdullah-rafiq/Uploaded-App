@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+             get(/databases/$(database)/documents/users/$(uid()))
+               .data.role == 'admin';
+    }
+
+    match /users/{userId} {
+  // Any signed-in user can read user profiles
+  allow read: if isSignedIn();
+
+  // Normal user updating their own profile (no sensitive fields)
+  allow update: if isSignedIn() && uid() == userId
+    && request.resource.data.role == resource.data.role
+    && request.resource.data.walletBalance == resource.data.walletBalance
+    && request.resource.data.verified == resource.data.verified
+    && request.resource.data.verificationStatus == resource.data.verificationStatus
+    && request.resource.data.verificationReason == resource.data.verificationReason;
+
+  // User creates their own doc OR admin creates any doc (for seeding/admin tools)
+  allow create: if isSignedIn()
+    && (uid() == userId || isAdmin());
+
+  // Admin can do anything
+  allow delete, update: if isAdmin();
+}
+    // -----------------------------
+    // Services
+    // -----------------------------
+    match /services/{serviceId} {
+      allow read: if true;              // everyone can see services
+      allow create, update, delete: if isAdmin();
+    }
+// Reviews
+match /reviews/{reviewId} {
+  allow read: if true;
+
+  // Customer OR admin can create (admin needed for seeding)
+  allow create: if isSignedIn()
+    && (request.resource.data.customerId == uid() || isAdmin());
+
+  // Update/delete: author or admin
+  allow update, delete: if isSignedIn()
+    && (resource.data.customerId == uid() || isAdmin());
+}
+
+// Bookings
+match /bookings/{bookingId} {
+  allow read: if isSignedIn()
+    && resource.data != null
+    && (
+      resource.data.customerId == uid() ||
+      resource.data.providerId == uid() ||
+      isAdmin()
+    );
+
+  // Customer OR admin can create
+  allow create: if isSignedIn()
+    && (request.resource.data.customerId == uid() || isAdmin());
+
+  // Update / delete: customer, provider, or admin
+  allow update, delete: if isSignedIn()
+    && resource.data != null
+    && (
+      resource.data.customerId == uid() ||
+      resource.data.providerId == uid() ||
+      isAdmin()
+    );
+}
+    // -----------------------------
+    // Payments
+    // -----------------------------
+    match /payments/{paymentId} {
+      allow read: if isSignedIn()
+        && (
+          resource.data.userId == uid() ||
+          resource.data.providerId == uid() ||
+          isAdmin()
+        );
+
+      // Usually only backend/admin should write payments
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -----------------------------
+    // User Notifications
+    // -----------------------------
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn()
+        && (resource.data.userId == uid() || isAdmin());
+
+      // Typically created by backend/Cloud Functions; here allow admin
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -----------------------------
+    // Admin Notifications
+    // -----------------------------
+    match /admin_notifications/{docId} {
+      // Your AuthService currently writes these from client
+      allow create: if isSignedIn();
+
+      // Only admins can see/manage admin notifications
+      allow read, update, delete: if isAdmin();
+    }
+
+    // -----------------------------
+    // Chats + Messages
+    // -----------------------------
+    match /chats/{chatId} {
+      function isParticipant() {
+        return isSignedIn()
+          && chatId != null
+          && (uid() in resource.data.participants);
+      }
+
+      // Chats visible only to participants or admin
+      allow read, update, delete: if isParticipant() || isAdmin();
+
+      // Create chat docs from client is okay (participants will be set)
+      allow create: if isSignedIn();
+
+      match /messages/{messageId} {
+        // Read/write messages only if you are in chat participants or admin
+        allow read, create: if isSignedIn()
+          && (
+            uid() in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+            || isAdmin()
+          );
+
+        // No client-side updates/deletes of messages for now
+        allow update, delete: if false;
+      }
+    }
+  }
+}
