@@ -9,6 +9,7 @@ import 'package:flutter_application_1/services/booking_service.dart';
 import 'package:flutter_application_1/services/service_catalog_service.dart';
 import 'package:flutter_application_1/user/payment_page.dart';
 import 'package:flutter_application_1/user/booking_detail_page.dart';
+import 'package:flutter_application_1/localized_strings.dart';
 
 class MyBookingsPage extends StatelessWidget {
   const MyBookingsPage({super.key});
@@ -18,9 +19,9 @@ class MyBookingsPage extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to view your bookings.'),
+          child: Text(L10n.bookingsLoginRequiredMessage()),
         ),
       );
     }
@@ -28,7 +29,7 @@ class MyBookingsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: Navigator.of(context).canPop(),
-        title: const Text('My Bookings'),
+        title: Text(L10n.bookingsAppBarTitle()),
       ),
       body: StreamBuilder<List<BookingModel>>(
         stream: BookingService.instance.watchCustomerBookings(user.uid),
@@ -38,8 +39,8 @@ class MyBookingsPage extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            return const Center(
-              child: Text('Could not load bookings.'),
+            return Center(
+              child: Text(L10n.bookingsLoadError()),
             );
           }
 
@@ -64,18 +65,18 @@ class MyBookingsPage extends StatelessWidget {
           String statusLabel(String status) {
             switch (status) {
               case BookingStatus.completed:
-                return 'Completed';
+                return L10n.bookingStatusCompleted();
               case BookingStatus.cancelled:
-                return 'Cancelled';
+                return L10n.bookingStatusCancelled();
               case BookingStatus.inProgress:
-                return 'In progress';
+                return L10n.bookingStatusInProgress();
               case BookingStatus.onTheWay:
-                return 'On the way';
+                return L10n.bookingStatusOnTheWay();
               case BookingStatus.accepted:
-                return 'Scheduled';
+                return L10n.bookingStatusAccepted();
               case BookingStatus.requested:
               default:
-                return 'Requested';
+                return L10n.bookingStatusRequested();
             }
           }
 
@@ -128,7 +129,7 @@ class MyBookingsPage extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 b.scheduledTime == null
-                                    ? 'Time: not set'
+                                    ? 'Time: ${L10n.commonNotSet()}'
                                     : 'Time: ${_formatDateTime(b.scheduledTime)}',
                                 style: const TextStyle(
                                   fontSize: 12,
@@ -178,12 +179,12 @@ class MyBookingsPage extends StatelessWidget {
                                 ),
                               );
                             },
-                            child: const Text('Pay now'),
+                            child: Text(L10n.bookingPayNowCta()),
                           )
                         else
-                          const Text(
-                            'Paid',
-                            style: TextStyle(
+                          Text(
+                            L10n.bookingPaidLabel(),
+                            style: const TextStyle(
                               color: Colors.green,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -207,12 +208,12 @@ class MyBookingsPage extends StatelessWidget {
           ];
 
           final statusLabels = [
-            'Requested',
-            'Scheduled',
-            'On the way',
-            'In progress',
-            'Completed',
-            'Cancelled',
+            L10n.bookingStatusRequested(),
+            L10n.bookingStatusAccepted(),
+            L10n.bookingStatusOnTheWay(),
+            L10n.bookingStatusInProgress(),
+            L10n.bookingStatusCompleted(),
+            L10n.bookingStatusCancelled(),
           ];
 
           return DefaultTabController(
@@ -247,7 +248,7 @@ class MyBookingsPage extends StatelessWidget {
                             if (filtered.isEmpty) {
                               return Center(
                                 child: Text(
-                                  'No ${statusLabel(status).toLowerCase()} bookings yet.',
+                                  L10n.bookingsEmptyForStatus(),
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               );

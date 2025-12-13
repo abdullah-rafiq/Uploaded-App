@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/models/booking.dart';
@@ -250,7 +251,7 @@ class AdminAnalyticsPage extends StatelessWidget {
   }
 
   Widget _buildUserStatsGrid(BuildContext context, _AdminAnalyticsData data) {
-    final theme = Theme.of(context);
+    final hasUsers = data.totalUsers > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,24 +269,34 @@ class AdminAnalyticsPage extends StatelessWidget {
               value: data.totalUsers.toString(),
               icon: Icons.people_outline,
               color: Colors.blueAccent,
+              subtitle: 'All registered users',
             ),
             _StatCard(
               title: 'Customers',
               value: data.customerCount.toString(),
               icon: Icons.person_outline,
               color: Colors.green,
+              percentage:
+                  hasUsers ? data.customerCount / data.totalUsers : null,
+              subtitle: hasUsers ? 'Of all users' : null,
             ),
             _StatCard(
               title: 'Providers',
               value: data.providerCount.toString(),
               icon: Icons.handyman_outlined,
               color: Colors.orange,
+              percentage:
+                  hasUsers ? data.providerCount / data.totalUsers : null,
+              subtitle: hasUsers ? 'Of all users' : null,
             ),
             _StatCard(
               title: 'Admins',
               value: data.adminCount.toString(),
               icon: Icons.admin_panel_settings_outlined,
               color: Colors.purple,
+              percentage:
+                  hasUsers ? data.adminCount / data.totalUsers : null,
+              subtitle: hasUsers ? 'Of all users' : null,
             ),
           ],
         ),
@@ -300,7 +311,6 @@ class AdminAnalyticsPage extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final max = data.totalUsers;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,25 +338,59 @@ class AdminAnalyticsPage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _BookingsBar(
-                label: 'Customers',
-                value: data.customerCount,
-                max: max,
-                color: Colors.green,
+              SizedBox(
+                height: 220,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 40,
+                    sections: [
+                      if (data.customerCount > 0)
+                        PieChartSectionData(
+                          color: Colors.green,
+                          value: data.customerCount.toDouble(),
+                          title: 'Customers',
+                          titleStyle:
+                              theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      if (data.providerCount > 0)
+                        PieChartSectionData(
+                          color: Colors.orange,
+                          value: data.providerCount.toDouble(),
+                          title: 'Providers',
+                          titleStyle:
+                              theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      if (data.adminCount > 0)
+                        PieChartSectionData(
+                          color: Colors.purple,
+                          value: data.adminCount.toDouble(),
+                          title: 'Admins',
+                          titleStyle:
+                              theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              _BookingsBar(
-                label: 'Providers',
-                value: data.providerCount,
-                max: max,
-                color: Colors.orange,
-              ),
-              const SizedBox(height: 8),
-              _BookingsBar(
-                label: 'Admins',
-                value: data.adminCount,
-                max: max,
-                color: Colors.purple,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: const [
+                  _LegendItem(color: Colors.green, label: 'Customers'),
+                  _LegendItem(color: Colors.orange, label: 'Providers'),
+                  _LegendItem(color: Colors.purple, label: 'Admins'),
+                ],
               ),
             ],
           ),
@@ -359,9 +403,8 @@ class AdminAnalyticsPage extends StatelessWidget {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
 
-    final maxBookings = data.totalBookings == 0
-        ? 1
-        : data.totalBookings;
+    final maxBookings =
+        data.totalBookings == 0 ? 1 : data.totalBookings;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,7 +493,6 @@ class AdminAnalyticsPage extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final max = data.totalBookings;
 
     const statuses = <String>[
       BookingStatus.requested,
@@ -505,16 +547,43 @@ class AdminAnalyticsPage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              for (final status in statuses)
-                if ((data.bookingsByStatus[status] ?? 0) > 0) ...[
-                  _BookingsBar(
-                    label: status,
-                    value: data.bookingsByStatus[status] ?? 0,
-                    max: max,
-                    color: colorForStatus(status),
+              SizedBox(
+                height: 220,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 40,
+                    sections: [
+                      for (final status in statuses)
+                        if ((data.bookingsByStatus[status] ?? 0) > 0)
+                          PieChartSectionData(
+                            color: colorForStatus(status),
+                            value:
+                                (data.bookingsByStatus[status] ?? 0).toDouble(),
+                            title: status,
+                            titleStyle:
+                                theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  for (final status in statuses)
+                    if ((data.bookingsByStatus[status] ?? 0) > 0)
+                      _LegendItem(
+                        color: colorForStatus(status),
+                        label: status,
+                      ),
                 ],
+              ),
             ],
           ),
         ),
@@ -529,9 +598,6 @@ class AdminAnalyticsPage extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final maxCity = data.topCitiesByBookings
-        .map((c) => c.count)
-        .fold<int>(0, (prev, v) => v > prev ? v : prev);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -557,18 +623,60 @@ class AdminAnalyticsPage extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              for (final city in data.topCitiesByBookings) ...[
-                _BookingsBar(
-                  label: city.city,
-                  value: city.count,
-                  max: maxCity == 0 ? 1 : maxCity,
-                  color: Colors.lightBlue,
+          child: SizedBox(
+            height: 240,
+            child: BarChart(
+              BarChartData(
+                barGroups: [
+                  for (int i = 0;
+                      i < data.topCitiesByBookings.length;
+                      i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY:
+                              data.topCitiesByBookings[i].count.toDouble(),
+                          color: Colors.lightBlue,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    ),
+                ],
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 38,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 ||
+                            index >= data.topCitiesByBookings.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final city = data.topCitiesByBookings[index].city;
+                        return SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          space: 8,
+                          child: Text(
+                            city,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ],
@@ -587,7 +695,20 @@ class AdminAnalyticsPage extends StatelessWidget {
         .fold<int>(0, (prev, v) => prev + v);
     final last30Total = data.signupsLast30DaysByDay.values
         .fold<int>(0, (prev, v) => prev + v);
-    final maxTotal = [last7Total, last30Total, 1].reduce((a, b) => a > b ? a : b);
+
+    // Build a simple 7-day trend line chart based on the last 7 days map.
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final last7Start = today.subtract(const Duration(days: 6));
+
+    final List<FlSpot> spots = [];
+    for (int i = 0; i < 7; i++) {
+      final day = last7Start.add(Duration(days: i));
+      final key =
+          '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final count = data.signupsLast7DaysByDay[key] ?? 0;
+      spots.add(FlSpot(i.toDouble(), count.toDouble()));
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,18 +737,64 @@ class AdminAnalyticsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _BookingsBar(
-                label: 'Last 7 days',
-                value: last7Total,
-                max: maxTotal,
-                color: Colors.teal,
+              SizedBox(
+                height: 220,
+                child: LineChart(
+                  LineChartData(
+                    gridData: FlGridData(show: true),
+                    borderData: FlBorderData(show: false),
+                    titlesData: FlTitlesData(
+                      topTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      leftTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 32,
+                          getTitlesWidget: (value, meta) {
+                            final index = value.toInt();
+                            if (index < 0 || index >= 7) {
+                              return const SizedBox.shrink();
+                            }
+                            final day =
+                                last7Start.add(Duration(days: index));
+                            final label = '${day.day}/${day.month}';
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              space: 8,
+                              child: Text(
+                                label,
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        color: Colors.teal,
+                        barWidth: 3,
+                        dotData: FlDotData(show: true),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              _BookingsBar(
-                label: 'Last 30 days',
-                value: last30Total,
-                max: maxTotal,
-                color: Colors.indigo,
+              const SizedBox(height: 12),
+              Text(
+                'Last 7 days: $last7Total signups',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Last 30 days: $last30Total signups',
+                style: theme.textTheme.bodyMedium,
               ),
             ],
           ),
@@ -643,9 +810,6 @@ class AdminAnalyticsPage extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final total = data.verificationCounts.values
-        .fold<int>(0, (prev, v) => prev + v);
-    final maxTotal = total == 0 ? 1 : total;
 
     const order = <String>['approved', 'pending', 'rejected', 'none'];
 
@@ -701,16 +865,43 @@ class AdminAnalyticsPage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              for (final key in order)
-                if ((data.verificationCounts[key] ?? 0) > 0) ...[
-                  _BookingsBar(
-                    label: labelForStatus(key),
-                    value: data.verificationCounts[key] ?? 0,
-                    max: maxTotal,
-                    color: colorForStatus(key),
+              SizedBox(
+                height: 220,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 40,
+                    sections: [
+                      for (final key in order)
+                        if ((data.verificationCounts[key] ?? 0) > 0)
+                          PieChartSectionData(
+                            color: colorForStatus(key),
+                            value:
+                                (data.verificationCounts[key] ?? 0).toDouble(),
+                            title: labelForStatus(key),
+                            titleStyle:
+                                theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  for (final key in order)
+                    if ((data.verificationCounts[key] ?? 0) > 0)
+                      _LegendItem(
+                        color: colorForStatus(key),
+                        label: labelForStatus(key),
+                      ),
                 ],
+              ),
             ],
           ),
         ),
@@ -725,9 +916,6 @@ class AdminAnalyticsPage extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
-    final maxCompleted = data.topProviders
-        .map((p) => p.completedBookings)
-        .fold<int>(0, (prev, v) => v > prev ? v : prev);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -753,18 +941,57 @@ class AdminAnalyticsPage extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              for (final provider in data.topProviders) ...[
-                _BookingsBar(
-                  label: provider.name,
-                  value: provider.completedBookings,
-                  max: maxCompleted == 0 ? 1 : maxCompleted,
-                  color: Colors.teal,
+          child: SizedBox(
+            height: 240,
+            child: BarChart(
+              BarChartData(
+                barGroups: [
+                  for (int i = 0; i < data.topProviders.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY: data.topProviders[i].completedBookings
+                              .toDouble(),
+                          color: Colors.teal,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    ),
+                ],
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles:
+                      AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= data.topProviders.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final name = data.topProviders[index].name;
+                        return SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          space: 8,
+                          child: Text(
+                            name,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
-              ],
-            ],
+              ),
+            ),
           ),
         ),
       ],
@@ -831,12 +1058,16 @@ class _StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final double? percentage;
+  final String? subtitle;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
+    this.percentage,
+    this.subtitle,
   });
 
   @override
@@ -863,13 +1094,29 @@ class _StatCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: color.withOpacity(0.12),
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: color,
+              SizedBox(
+                height: 36,
+                width: 36,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (percentage != null)
+                      CircularProgressIndicator(
+                        value: percentage!.clamp(0.0, 1.0).toDouble(),
+                        strokeWidth: 3,
+                        backgroundColor: color.withOpacity(0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: color.withOpacity(0.12),
+                      child: Icon(
+                        icon,
+                        size: 18,
+                        color: color,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),
@@ -892,6 +1139,15 @@ class _StatCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -974,6 +1230,40 @@ class _BookingsBar extends StatelessWidget {
               ),
             );
           },
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall,
         ),
       ],
     );

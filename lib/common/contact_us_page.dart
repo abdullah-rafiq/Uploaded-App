@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../localized_strings.dart';
 
 class ContactUsPage extends StatefulWidget {
   const ContactUsPage({super.key});
@@ -11,14 +12,19 @@ class ContactUsPage extends StatefulWidget {
 
 class _ContactUsPageState extends State<ContactUsPage> {
   final TextEditingController _chatController = TextEditingController();
-  final List<_ChatMessage> _messages = <_ChatMessage>[
-    const _ChatMessage(
-      fromUser: false,
-      text:
-          'Hi! I\'m Assist Support Bot. Ask me anything about your account or orders.',
-      timestampLabel: 'now',
-    ),
-  ];
+  final List<_ChatMessage> _messages = <_ChatMessage>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _messages.add(
+      _ChatMessage(
+        fromUser: false,
+        text: L10n.contactSupportBotWelcome(),
+        timestampLabel: 'now',
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -40,27 +46,22 @@ class _ContactUsPageState extends State<ContactUsPage> {
 
     Future.delayed(const Duration(milliseconds: 400), () {
       if (!mounted) return;
-      String reply =
-          'Thanks for your message. Our support team will contact you soon.';
+      String reply = L10n.contactSupportReplyGeneric();
 
       if (text.toLowerCase().contains('password')) {
-        reply =
-            'For password issues: you can use "Forgot password" on the login screen to reset it.';
+        reply = L10n.contactSupportReplyPassword();
       } else if (text.toLowerCase().contains('payment')) {
-        reply =
-            'Payment questions: please check your Payment section in the app or contact us at support@example.com.';
+        reply = L10n.contactSupportReplyPayment();
       } else if (text.toLowerCase().contains('order') ||
           text.toLowerCase().contains('booking')) {
-        reply =
-            'Order / booking questions: you can track status from the Booking / Tracking section of the app.';
+        reply = L10n.contactSupportReplyBooking();
       }
 
       setState(() {
         _messages.add(
-          const _ChatMessage(
+          _ChatMessage(
             fromUser: false,
-            text:
-                'This is a demo live chat. In production you would connect this to a real support backend.',
+            text: L10n.contactDemoChatInfo(),
             timestampLabel: 'now',
           ),
         );
@@ -75,7 +76,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Contact us'),
+        title: Text(L10n.contactAppBarTitle()),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
@@ -153,12 +154,12 @@ class _ContactUsPageState extends State<ContactUsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
+                      Padding(
                         padding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Text(
-                          'Live chat',
-                          style: TextStyle(
+                          L10n.contactLiveChatTitle(),
+                          style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -231,8 +232,8 @@ class _ContactUsPageState extends State<ContactUsPage> {
                                   Expanded(
                                     child: TextField(
                                       controller: _chatController,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Type your message...',
+                                      decoration: InputDecoration(
+                                        hintText: L10n.contactTypeMessageHint(),
                                         border: InputBorder.none,
                                       ),
                                       onSubmitted: (_) => _sendMessage(),

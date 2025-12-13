@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../localized_strings.dart';
 
 class TermsAndConditionsPage extends StatelessWidget {
   const TermsAndConditionsPage({super.key});
@@ -16,7 +17,7 @@ class TermsAndConditionsPage extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('Terms & conditions'),
+        title: Text(L10n.termsTitle()),
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(

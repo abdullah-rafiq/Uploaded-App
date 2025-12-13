@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../localized_strings.dart';
 
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
@@ -16,7 +17,7 @@ class PrivacyPolicyPage extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('Privacy policy'),
+        title: Text(L10n.privacyTitle()),
       ),
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Padding(

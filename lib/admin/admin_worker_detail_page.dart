@@ -26,6 +26,8 @@ class AdminWorkerDetailPage extends StatelessWidget {
           children: [
             _buildHeaderCard(context),
             const SizedBox(height: 16),
+            _buildVerificationSection(context),
+            const SizedBox(height: 16),
             _buildEarningsSection(context),
             const SizedBox(height: 16),
             _buildReviewsSection(context),
@@ -82,6 +84,228 @@ class AdminWorkerDetailPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildVerificationSection(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(worker.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _sectionCard(
+            context,
+            title: 'Verification documents',
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _sectionCard(
+            context,
+            title: 'Verification documents',
+            child: Text('Error loading verification: ${snapshot.error}'),
+          );
+        }
+
+        final doc = snapshot.data;
+        final data = doc?.data();
+        if (doc == null || !doc.exists || data == null) {
+          return _sectionCard(
+            context,
+            title: 'Verification documents',
+            child: const Text('No verification data found for this worker.'),
+          );
+        }
+
+        final String? cnicFrontUrl = data['cnicFrontImageUrl'] as String?;
+        final String? cnicBackUrl = data['cnicBackImageUrl'] as String?;
+        final String? selfieUrl = data['selfieImageUrl'] as String?;
+        final String? shopUrl = data['shopImageUrl'] as String?;
+
+        final String cnicFrontStatus =
+            (data['cnicFrontStatus'] as String?) ?? 'pending';
+        final String cnicBackStatus =
+            (data['cnicBackStatus'] as String?) ?? 'pending';
+        final String selfieStatus =
+            (data['selfieStatus'] as String?) ?? 'pending';
+        final String shopStatus =
+            (data['shopStatus'] as String?) ?? 'pending';
+
+        final bool hasAnyImage =
+            cnicFrontUrl != null ||
+            cnicBackUrl != null ||
+            selfieUrl != null ||
+            shopUrl != null;
+
+        if (!hasAnyImage) {
+          return _sectionCard(
+            context,
+            title: 'Verification documents',
+            child: const Text(
+              'Worker has not submitted verification photos yet.',
+            ),
+          );
+        }
+
+        Color statusColor(String status) {
+          switch (status) {
+            case 'approved':
+              return Colors.green;
+            case 'rejected':
+              return Colors.redAccent;
+            case 'pending':
+            default:
+              return Colors.orange;
+          }
+        }
+
+        String statusLabel(String status) {
+          switch (status) {
+            case 'approved':
+              return 'Approved';
+            case 'rejected':
+              return 'Needs resubmit';
+            case 'pending':
+            default:
+              return 'Pending';
+          }
+        }
+
+        Widget buildDocRow({
+          required String title,
+          required String fieldStatusKey,
+          required String status,
+          required String? url,
+        }) {
+          if (url == null) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('$title: Not uploaded'),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor(status).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      statusLabel(status),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor(status),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.check),
+                      label: const Text('Pass'),
+                      onPressed: () async {
+                        await _updateDocStatus(
+                          context,
+                          data,
+                          fieldStatusKey,
+                          'approved',
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.refresh,
+                        color: Colors.redAccent,
+                      ),
+                      label: const Text('Resubmit'),
+                      onPressed: () async {
+                        await _updateDocStatus(
+                          context,
+                          data,
+                          fieldStatusKey,
+                          'rejected',
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          );
+        }
+
+        return _sectionCard(
+          context,
+          title: 'Verification documents',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildDocRow(
+                title: 'CNIC front picture',
+                fieldStatusKey: 'cnicFrontStatus',
+                status: cnicFrontStatus,
+                url: cnicFrontUrl,
+              ),
+              buildDocRow(
+                title: 'CNIC back picture',
+                fieldStatusKey: 'cnicBackStatus',
+                status: cnicBackStatus,
+                url: cnicBackUrl,
+              ),
+              buildDocRow(
+                title: 'Live picture',
+                fieldStatusKey: 'selfieStatus',
+                status: selfieStatus,
+                url: selfieUrl,
+              ),
+              buildDocRow(
+                title: 'Shop / tools picture',
+                fieldStatusKey: 'shopStatus',
+                status: shopStatus,
+                url: shopUrl,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -271,18 +495,81 @@ class AdminWorkerDetailPage extends StatelessWidget {
     );
   }
 
+  Future<void> _updateDocStatus(
+    BuildContext context,
+    Map<String, dynamic> currentData,
+    String statusField,
+    String newStatus,
+  ) async {
+    try {
+      final Map<String, String> statuses = {
+        'cnicFrontStatus': statusField == 'cnicFrontStatus'
+            ? newStatus
+            : (currentData['cnicFrontStatus'] as String? ?? 'pending'),
+        'cnicBackStatus': statusField == 'cnicBackStatus'
+            ? newStatus
+            : (currentData['cnicBackStatus'] as String? ?? 'pending'),
+        'selfieStatus': statusField == 'selfieStatus'
+            ? newStatus
+            : (currentData['selfieStatus'] as String? ?? 'pending'),
+        'shopStatus': statusField == 'shopStatus'
+            ? newStatus
+            : (currentData['shopStatus'] as String? ?? 'pending'),
+      };
+
+      String overall;
+      if (statuses.values.every((s) => s == 'approved')) {
+        overall = 'approved';
+      } else if (statuses.values.any((s) => s == 'rejected')) {
+        overall = 'rejected';
+      } else {
+        overall = 'pending';
+      }
+
+      final updates = <String, dynamic>{
+        statusField: newStatus,
+        'verificationStatus': overall,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(worker.id)
+          .update(updates);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newStatus == 'approved'
+                  ? 'Document marked as passed.'
+                  : 'Document marked for resubmission.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update status: $e')),
+        );
+      }
+    }
+  }
+
   Widget _sectionCard(BuildContext context,
       {required String title, required Widget child}) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x14000000),
+            color: theme.shadowColor.withOpacity(0.08),
             blurRadius: 12,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),

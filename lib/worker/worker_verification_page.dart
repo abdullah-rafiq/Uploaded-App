@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,9 +28,41 @@ class _WorkerVerificationPageState extends State<WorkerVerificationPage> {
   final PageController _pageController = PageController();
 
   @override
+  void initState() {
+    super.initState();
+    _loadExistingVerification();
+  }
+
+  @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadExistingVerification() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final data = doc.data();
+      if (data == null) return;
+
+      setState(() {
+        _cnicFrontUrl = data['cnicFrontImageUrl'] as String?;
+        _cnicBackUrl = data['cnicBackImageUrl'] as String?;
+        _selfieUrl = data['selfieImageUrl'] as String?;
+        _shopUrl = data['shopImageUrl'] as String?;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load existing verification: $e')),
+      );
+    }
   }
 
   Future<void> _pickAndUpload(String field) async {
@@ -56,10 +89,28 @@ class _WorkerVerificationPageState extends State<WorkerVerificationPage> {
       );
       final url = result.secureUrl;
 
-      await UserService.instance.updateUser(user.uid, {
+      final Map<String, dynamic> updateData = {
         field: url,
         '${field}PublicId': result.publicId,
-      });
+        'verificationStatus': 'pending',
+      };
+
+      switch (field) {
+        case 'cnicFrontImageUrl':
+          updateData['cnicFrontStatus'] = 'pending';
+          break;
+        case 'cnicBackImageUrl':
+          updateData['cnicBackStatus'] = 'pending';
+          break;
+        case 'selfieImageUrl':
+          updateData['selfieStatus'] = 'pending';
+          break;
+        case 'shopImageUrl':
+          updateData['shopStatus'] = 'pending';
+          break;
+      }
+
+      await UserService.instance.updateUser(user.uid, updateData);
 
       setState(() {
         if (field == 'cnicFrontImageUrl') {
@@ -140,6 +191,10 @@ class _WorkerVerificationPageState extends State<WorkerVerificationPage> {
     try {
       await UserService.instance.updateUser(user.uid, {
         'verificationStatus': 'pending',
+        'cnicFrontStatus': 'pending',
+        'cnicBackStatus': 'pending',
+        'selfieStatus': 'pending',
+        'shopStatus': 'pending',
       });
 
       if (mounted) {

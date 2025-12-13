@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../localized_strings.dart';
 
 class FaqPage extends StatelessWidget {
   const FaqPage({super.key});
@@ -43,7 +44,7 @@ class FaqPage extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('FAQ'),
+        title: Text(L10n.faqTitle()),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Padding(

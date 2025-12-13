@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../theme_mode_notifier.dart';
 import '../app_locale.dart';
+import '../localized_strings.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -77,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('App settings'),
+        title: Text(L10n.settingsAppBarTitle()),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Padding(
@@ -98,9 +99,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             shrinkWrap: true,
             children: [
               SwitchListTile(
-                title: const Text('Push notifications'),
-                subtitle: const Text(
-                    'Receive updates about your bookings and offers.'),
+                title: Text(L10n.settingsPushNotificationsTitle()),
+                subtitle: Text(L10n.settingsPushNotificationsSubtitle()),
                 value: _notificationsEnabled,
                 onChanged: _loadingNotifications
                     ? null
@@ -145,9 +145,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 builder: (context, themeMode, _) {
                   final isDark = themeMode == ThemeMode.dark;
                   return SwitchListTile(
-                    title: const Text('Dark mode'),
-                    subtitle:
-                        const Text('Use a dark theme for the application.'),
+                    title: Text(L10n.settingsDarkModeTitle()),
+                    subtitle: Text(L10n.settingsDarkModeSubtitle()),
                     value: isDark,
                     onChanged: (value) {
                       AppTheme.setThemeMode(
@@ -164,8 +163,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final isUrdu = currentLocale.languageCode == 'ur';
                   return ListTile(
                     leading: const Icon(Icons.language),
-                    title: const Text('Language'),
-                    subtitle: Text(isUrdu ? 'Urdu' : 'English'),
+                    title: Text(L10n.settingsLanguageTitle()),
+                    subtitle:
+                        Text(isUrdu ? L10n.languageNameUrdu() : L10n.languageNameEnglish()),
                     onTap: () async {
                       final newLocale = isUrdu
                           ? const Locale('en')

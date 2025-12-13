@@ -19,6 +19,7 @@ import 'package:flutter_application_1/common/app_bottom_nav.dart';
 import 'package:flutter_application_1/user/top_workers_section.dart';
 import 'package:flutter_application_1/user/featured_providers_section.dart';
 import 'package:flutter_application_1/user/voice_search_card.dart';
+import 'package:flutter_application_1/localized_strings.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -229,9 +230,9 @@ class _MainPageState extends State<MainPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Welcome,',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  Text(
+                    L10n.mainWelcomePrefix(),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   if (current == null)
                     const Text(
@@ -367,7 +368,9 @@ class _MainPageState extends State<MainPage> {
                     ),
               title: Text(cat.name),
               subtitle: Text(
-                cat.isActive ? 'Available' : 'Currently unavailable',
+                cat.isActive
+                    ? L10n.statusAvailable()
+                    : L10n.statusUnavailable(),
                 style: TextStyle(
                   color: cat.isActive ? Colors.green : Colors.redAccent,
                   fontSize: 12,
@@ -578,7 +581,7 @@ class _MainPageState extends State<MainPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
                   child: Text(
-                    'Categories',
+                    L10n.mainCategoriesTitle(),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -597,7 +600,7 @@ class _MainPageState extends State<MainPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
                   child: Text(
-                    'Featured Providers',
+                    L10n.mainFeaturedProvidersTitle(),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -618,7 +621,7 @@ class _MainPageState extends State<MainPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
                   child: Text(
-                    'Upcoming Bookings',
+                    L10n.mainUpcomingBookingsTitle(),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -647,7 +650,7 @@ class _MainPageState extends State<MainPage> {
           foregroundColor:
               Theme.of(context).appBarTheme.foregroundColor,
           elevation: 4,
-          title: const Text('Categories'),
+          title: Text(L10n.mainCategoriesTitle()),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -666,12 +669,12 @@ class _MainPageState extends State<MainPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding:
-                      EdgeInsets.symmetric(horizontal: 18.0, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12),
                   child: Text(
-                    'All Categories',
-                    style: TextStyle(
+                    L10n.mainAllCategoriesTitle(),
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.1,
@@ -707,25 +710,25 @@ class _MainPageState extends State<MainPage> {
           });
         },
         items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home_outlined),
+            label: L10n.customerNavHome(),
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.category_outlined),
-            label: 'Categories',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.category_outlined),
+            label: L10n.customerNavCategories(),
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'Bookings',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.calendar_today_outlined),
+            label: L10n.customerNavBookings(),
           ),
           BottomNavigationBarItem(
             icon: _MessagesIconWithBadge(),
-            label: 'Messages',
+            label: L10n.customerNavMessages(),
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person_outline),
+            label: L10n.customerNavProfile(),
           ),
         ],
       ),

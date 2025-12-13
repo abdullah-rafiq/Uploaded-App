@@ -194,6 +194,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/deep-cleaning.jpg',
     ],
     'isActive': true,
+    // For demo: attach to an approved Karachi provider so distance logic works
+    'providerId': 'user_provider_1',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 10, 9)),
   });
 
@@ -209,6 +211,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/ac-repair.jpg',
     ],
     'isActive': true,
+    // Attach to Karachi provider for demo distance filtering
+    'providerId': 'user_provider_1',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 12, 10)),
   });
 
@@ -223,6 +227,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/plumbing.jpg',
     ],
     'isActive': true,
+    // Attach to Lahore provider so Lahore customers see a nearby plumber
+    'providerId': 'user_provider_2',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 13, 11)),
   });
 
@@ -238,6 +244,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/electrician.jpg',
     ],
     'isActive': true,
+    // Attach to Karachi provider for demo
+    'providerId': 'user_provider_1',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 14, 10)),
   });
 
@@ -253,6 +261,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/carpentry.jpg',
     ],
     'isActive': true,
+    // Attach to Islamabad provider so Islamabad customers see a nearby carpenter
+    'providerId': 'user_provider_3',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 15, 9)),
   });
 
@@ -267,6 +277,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/painting.jpg',
     ],
     'isActive': true,
+    // Attach to Lahore provider for demo
+    'providerId': 'user_provider_2',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 16, 9)),
   });
 
@@ -281,6 +293,8 @@ Future<void> seedDemoData() async {
       'https://example.com/demo/barber.jpg',
     ],
     'isActive': true,
+    // Attach to Karachi provider for demo
+    'providerId': 'user_provider_1',
     'createdAt': Timestamp.fromDate(DateTime(2024, 11, 17, 10)),
   });
 

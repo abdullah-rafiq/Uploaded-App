@@ -1,0 +1,3 @@
+[build]
+  command = "if [ ! -d flutter ]; then git clone https://github.com/flutter/flutter.git -b stable; fi && export PATH=\"$PATH:$PWD/flutter/bin\" && flutter config --enable-web && flutter pub get && flutter build web --release"
+  publish = "build/web"

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_application_1/models/booking.dart';
 import 'package:flutter_application_1/services/booking_service.dart';
+import 'package:flutter_application_1/localized_strings.dart';
 
 class WorkerEarningsPage extends StatelessWidget {
   const WorkerEarningsPage({super.key});
@@ -14,9 +15,9 @@ class WorkerEarningsPage extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to view your earnings.'),
+          child: Text(L10n.workerEarningsLoginRequiredMessage()),
         ),
       );
     }
@@ -29,7 +30,7 @@ class WorkerEarningsPage extends StatelessWidget {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('Earnings'),
+        title: Text(L10n.workerEarningsAppBarTitle()),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: StreamBuilder<List<BookingModel>>(
@@ -43,8 +44,8 @@ class WorkerEarningsPage extends StatelessWidget {
           }
 
           if (snapshot.hasError) {
-            return const Center(
-              child: Text('Could not load earnings.'),
+            return Center(
+              child: Text(L10n.workerEarningsLoadError()),
             );
           }
 
@@ -76,9 +77,9 @@ class WorkerEarningsPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Total earnings',
-                        style: TextStyle(
+                      Text(
+                        L10n.workerEarningsTotalTitle(),
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -94,8 +95,8 @@ class WorkerEarningsPage extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         bookings.isEmpty
-                            ? 'No completed jobs yet. Completed jobs will appear here.'
-                            : 'Based on ${bookings.length} completed job(s).',
+                            ? L10n.workerEarningsNoCompletedSummary()
+                            : L10n.workerEarningsBasedOnJobs(),
                         style: const TextStyle(),
                       ),
                     ],
@@ -104,8 +105,8 @@ class WorkerEarningsPage extends StatelessWidget {
                 const SizedBox(height: 16),
                 Expanded(
                   child: bookings.isEmpty
-                      ? const Center(
-                          child: Text('No completed jobs to show.'),
+                      ? Center(
+                          child: Text(L10n.workerEarningsNoCompletedList()),
                         )
                       : ListView.separated(
                           itemCount: bookings.length,
@@ -170,7 +171,7 @@ class WorkerEarningsPage extends StatelessWidget {
 }
 
 String _formatDateTime(DateTime? dt) {
-  if (dt == null) return 'Not set';
+  if (dt == null) return L10n.commonNotSet();
   final local = dt.toLocal();
   final date = '${local.year.toString().padLeft(4, '0')}-'
       '${local.month.toString().padLeft(2, '0')}-'

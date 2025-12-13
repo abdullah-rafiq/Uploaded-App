@@ -9,6 +9,7 @@ import 'package:flutter_application_1/models/service.dart';
 import 'package:flutter_application_1/services/booking_service.dart';
 import 'package:flutter_application_1/services/service_catalog_service.dart';
 import 'package:flutter_application_1/services/user_service.dart';
+import 'package:flutter_application_1/localized_strings.dart';
 import 'worker_job_detail_page.dart';
 
 class WorkerJobsPage extends StatefulWidget {
@@ -26,9 +27,9 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to view your jobs.'),
+          child: Text(L10n.workerJobsLoginRequiredMessage()),
         ),
       );
     }
@@ -41,7 +42,7 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
             Navigator.of(context).pop();
           },
         ),
-        title: const Text('My jobs'),
+        title: Text(L10n.workerJobsAppBarTitle()),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: StreamBuilder<List<BookingModel>>(
@@ -57,7 +58,7 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Could not load jobs.',
+                L10n.workerJobsLoadError(),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
@@ -70,7 +71,7 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
           if (bookings.isEmpty) {
             return Center(
               child: Text(
-                'No jobs assigned yet.',
+                L10n.workerJobsEmptyMessage(),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                 ),
@@ -103,15 +104,19 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip('All', null),
+                      _buildFilterChip(L10n.bookingFilterAll(), null),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Requested', BookingStatus.requested),
+                      _buildFilterChip(
+                          L10n.bookingStatusRequested(), BookingStatus.requested),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Accepted', BookingStatus.accepted),
+                      _buildFilterChip(
+                          L10n.bookingStatusAccepted(), BookingStatus.accepted),
                       const SizedBox(width: 8),
-                      _buildFilterChip('In progress', BookingStatus.inProgress),
+                      _buildFilterChip(
+                          L10n.bookingStatusInProgress(), BookingStatus.inProgress),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Completed', BookingStatus.completed),
+                      _buildFilterChip(
+                          L10n.bookingStatusCompleted(), BookingStatus.completed),
                     ],
                   ),
                 ),
@@ -186,7 +191,7 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            'Customer: $customerName',
+                                            '${L10n.workerJobCustomerPrefix()} $customerName',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: const TextStyle(
@@ -285,7 +290,7 @@ class _WorkerJobsPageState extends State<WorkerJobsPage> {
 }
 
 String _formatDateTime(DateTime? dt) {
-  if (dt == null) return 'Not set';
+  if (dt == null) return L10n.commonNotSet();
   final local = dt.toLocal();
   final date = '${local.year.toString().padLeft(4, '0')}-'
       '${local.month.toString().padLeft(2, '0')}-'

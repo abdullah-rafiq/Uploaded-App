@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +16,44 @@ import 'package:flutter_application_1/worker/worker_verification_page.dart';
 
 import '../user/wallet_page.dart';
 import '../user/my_bookings_page.dart';
+import '../localized_strings.dart';
+import '../dev_seed.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  StreamSubscription<AppUser?>? _verificationSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final current = FirebaseAuth.instance.currentUser;
+    if (current != null && current.emailVerified) {
+      _verificationSub = UserService.instance
+          .watchUser(current.uid)
+          .listen((profile) async {
+        if (profile != null && !profile.verified) {
+          await UserService.instance
+              .updateUser(current.uid, {'verified': true});
+        }
+
+        await _verificationSub?.cancel();
+        _verificationSub = null;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _verificationSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +71,8 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: FutureBuilder<AppUser?>(
-          future: UserService.instance.getById(current.uid),
+        child: StreamBuilder<AppUser?>(
+          stream: UserService.instance.watchUser(current.uid),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -47,24 +84,16 @@ class ProfilePage extends StatelessWidget {
 
             final profile = snapshot.data;
 
-            if (profile != null && !profile.verified) {
-              final authUser = current;
-              if (authUser.emailVerified) {
-                UserService.instance
-                    .updateUser(current.uid, {'verified': true});
-              }
-            }
             final displayName =
                 profile?.name ?? current.displayName ?? 'User';
             final profileImageUrl = profile?.profileImageUrl;
 
-            final avatarImage = (profileImageUrl != null && profileImageUrl.isNotEmpty)
-                    ? NetworkImage(profileImageUrl)
-                    : ResizeImage(
-                     const AssetImage('assets/profile.png'),
-                          width: 125,
-                          height: 125,
-                          ) as ImageProvider;
+            ImageProvider avatarImage;
+            if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+              avatarImage = NetworkImage(profileImageUrl);
+            } else {
+              avatarImage = const AssetImage('assets/profile.png');
+            }
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               child: Column(
@@ -210,7 +239,7 @@ class ProfilePage extends StatelessWidget {
                         children: <Widget>[
                           _QuickAction(
                             iconPath: 'assets/icons/wallet.png',
-                            label: 'Wallet',
+                            label: L10n.profileQuickWallet(),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -220,7 +249,7 @@ class ProfilePage extends StatelessWidget {
                           ),
                           _QuickAction(
                             iconPath: 'assets/icons/booking.png',
-                            label: 'Booking',
+                            label: L10n.profileQuickBooking(),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -230,7 +259,7 @@ class ProfilePage extends StatelessWidget {
                           ),
                           _QuickAction(
                             iconPath: 'assets/icons/card.png',
-                            label: 'Payment',
+                            label: L10n.profileQuickPayment(),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -240,7 +269,7 @@ class ProfilePage extends StatelessWidget {
                           ),
                           _QuickAction(
                             iconPath: 'assets/icons/contact-us.png',
-                            label: 'Support',
+                            label: L10n.profileQuickSupport(),
                             onTap: () {
                               context.push('/contact');
                             },
@@ -251,7 +280,7 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   if (profile != null && profile.role != UserRole.admin) ...[
                     ListTile(
-                      title: const Text('Edit profile'),
+                      title: Text(L10n.profileEditTitle()),
                       subtitle: Text(
                         profile.name == null || profile.name!.isEmpty
                             ? 'Add your name and phone number'
@@ -264,8 +293,39 @@ class ProfilePage extends StatelessWidget {
                     ),
                     const Divider(),
                   ],
+                  if (profile != null && profile.role == UserRole.admin) ...[
+                    ListTile(
+                      title: const Text('Seed demo data'),
+                      subtitle: const Text(
+                        'Populate Firestore with demo users, services, bookings, and reviews (dev only).',
+                      ),
+                      leading: const Icon(Icons.dataset_outlined),
+                      trailing:
+                          const Icon(Icons.play_arrow, color: accentBlue),
+                      onTap: () async {
+                        try {
+                          await seedDemoData();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Demo data seeded successfully.'),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text('Failed to seed demo data: $e'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    const Divider(),
+                  ],
                   ListTile(
-                    title: const Text('Settings'),
+                    title: Text(L10n.profileSettingsTitle()),
                     subtitle: const Text('Privacy and logout'),
                     leading: Image.asset(
                       'assets/icons/setting.png',
@@ -284,10 +344,13 @@ class ProfilePage extends StatelessWidget {
                   const Divider(),
                   if (profile == null || profile.role != UserRole.admin) ...[
                     ListTile(
-                      title: const Text('Help & Support'),
+                      title: Text(L10n.profileHelpSupportTitle()),
                       subtitle: const Text('Help center and legal support'),
-                      leading: Image.asset('assets/icons/support.png',cacheWidth: 125,  
-                        cacheHeight: 125,),
+                      leading: Image.asset(
+                        'assets/icons/support.png',
+                        cacheWidth: 125,
+                        cacheHeight: 125,
+                      ),
                       trailing:
                           const Icon(Icons.chevron_right, color: accentBlue),
                       onTap: () {
@@ -296,10 +359,13 @@ class ProfilePage extends StatelessWidget {
                     ),
                     const Divider(),
                     ListTile(
-                      title: const Text('FAQ'),
+                      title: Text(L10n.faqTitle()),
                       subtitle: const Text('Questions and Answers'),
-                      leading: Image.asset('assets/icons/faq.png',cacheWidth: 125,  
-                        cacheHeight: 125,),
+                      leading: Image.asset(
+                        'assets/icons/faq.png',
+                        cacheWidth: 125,
+                        cacheHeight: 125,
+                      ),
                       trailing:
                           const Icon(Icons.chevron_right, color: accentBlue),
                       onTap: () {
@@ -307,9 +373,31 @@ class ProfilePage extends StatelessWidget {
                       },
                     ),
                     const Divider(),
+                    ListTile(
+                      title: Text(L10n.termsTitle()),
+                      subtitle: const Text('Read app terms & conditions'),
+                      leading: const Icon(Icons.description_outlined),
+                      trailing:
+                          const Icon(Icons.chevron_right, color: accentBlue),
+                      onTap: () {
+                        context.push('/terms');
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      title: Text(L10n.privacyTitle()),
+                      subtitle: const Text('View privacy policy'),
+                      leading: const Icon(Icons.privacy_tip_outlined),
+                      trailing:
+                          const Icon(Icons.chevron_right, color: accentBlue),
+                      onTap: () {
+                        context.push('/privacy');
+                      },
+                    ),
+                    const Divider(),
                   ],
                   ListTile(
-                    title: const Text('Logout'),
+                    title: Text(L10n.profileLogoutTitle()),
                     subtitle: const Text('Sign out from this account'),
                     leading: const Icon(Icons.logout),
                     trailing:

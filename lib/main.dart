@@ -123,6 +123,12 @@ class MainApp extends StatelessWidget {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
+              builder: (context, child) {
+                return Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: child!,
+                );
+              },
               theme: ThemeData(
                 colorScheme: ColorScheme.fromSeed(
                   seedColor: Colors.blue,

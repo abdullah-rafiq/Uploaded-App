@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/services/auth_service.dart';
+import 'package:flutter_application_1/localized_strings.dart';
 
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
@@ -46,15 +47,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       setState(() {
-        if (email.isEmpty) _emailError = 'Email is required';
-        if (password.isEmpty) _passwordError = 'Password is required';
+        if (email.isEmpty) _emailError = L10n.authEmailRequiredError();
+        if (password.isEmpty) _passwordError = L10n.authPasswordRequiredError();
       });
       return;
     }
 
     if (!_isValidEmail(email)) {
       setState(() {
-        _emailError = 'Please enter a valid email address';
+        _emailError = L10n.authEnterValidEmailError();
       });
       return;
     }
@@ -100,22 +101,23 @@ class _AuthScreenState extends State<AuthScreen> {
           context.go('/home');
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Login failed';
+      String message = L10n.authLoginFailed();
 
       if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
+        message = L10n.authNoUserFound();
       } else if (e.code == 'wrong-password') {
-        message = 'Wrong password provided.';
+        message = L10n.authWrongPassword();
       } else if (e.code == 'invalid-email') {
-        message = 'Invalid email address.';
+        message = L10n.authInvalidEmail();
       }
 
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Something went wrong, please try again later')),
+        SnackBar(
+          content: Text(L10n.authSomethingWentWrong()),
+        ),
       );
     }
   }
@@ -173,12 +175,12 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Google sign-in failed')),
+        SnackBar(content: Text(e.message ?? L10n.authGoogleFailed())),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Something went wrong with Google sign-in: $e'),
+          content: Text('${L10n.authGoogleFailed()}: $e'),
         ),
       );
     }
@@ -199,9 +201,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
     return Scaffold(
       // Avoid full layout jump when keyboard opens; we handle insets manually
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
 
-      /// 🔥 FIXED BACKGROUND
+      /// FIXED BACKGROUND
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -231,9 +233,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   const SizedBox(height: 80),
 
-                  const Text(
-                    'Welcome Back,',
-                    style: TextStyle(
+                  Text(
+                    L10n.authWelcomeBackTitle(),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
@@ -249,9 +251,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
                   const SizedBox(height: 12),
 
-                  const Text(
-                    'Login to your account using\nEmail and password',
-                    style: TextStyle(
+                  Text(
+                    L10n.authLoginSubtitle(),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                     ),
@@ -283,7 +285,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(color: Colors.black87),
                           decoration: InputDecoration(
-                            labelText: "Email",
+                            labelText: L10n.authEmailLabel(),
                             labelStyle:
                                 const TextStyle(color: Colors.black54),
                             errorText: _emailError,
@@ -291,9 +293,9 @@ class _AuthScreenState extends State<AuthScreen> {
                           onChanged: (value) {
                             setState(() {
                               if (value.isEmpty) {
-                                _emailError = "Email is required";
+                                _emailError = L10n.authEmailRequiredError();
                               } else if (!_isValidEmail(value.trim())) {
-                                _emailError = "Enter a valid email";
+                                _emailError = L10n.authEnterValidEmailError();
                               } else {
                                 _emailError = null;
                               }
@@ -309,15 +311,16 @@ class _AuthScreenState extends State<AuthScreen> {
                           textInputAction: TextInputAction.done,
                           style: const TextStyle(color: Colors.black87),
                           decoration: InputDecoration(
-                            labelText: "Password",
+                            labelText: L10n.authPasswordLabel(),
                             labelStyle:
                                 const TextStyle(color: Colors.black54),
                             errorText: _passwordError,
                           ),
                           onChanged: (value) {
                             setState(() {
-                              _passwordError =
-                                  value.isEmpty ? "Password is required" : null;
+                              _passwordError = value.isEmpty
+                                  ? L10n.authPasswordRequiredError()
+                                  : null;
                             });
                           },
                           onSubmitted: (_) => _login(),
@@ -336,9 +339,9 @@ class _AuthScreenState extends State<AuthScreen> {
                               ),
                             ),
                             onPressed: _login,
-                            child: const Text(
-                              "Log In",
-                              style: TextStyle(
+                            child: Text(
+                              L10n.authLoginButton(),
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -355,17 +358,17 @@ class _AuthScreenState extends State<AuthScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        "Forgot your password? ",
-                        style: TextStyle(
+                      Text(
+                        L10n.authForgotPasswordQuestion(),
+                        style: const TextStyle(
                           color: Colors.white70,
                         ),
                       ),
                       GestureDetector(
                         onTap: _forgotPassword,
-                        child: const Text(
-                          "Reset password",
-                          style: TextStyle(
+                        child: Text(
+                          L10n.authResetPasswordCta(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
@@ -389,9 +392,9 @@ class _AuthScreenState extends State<AuthScreen> {
                           "assets/icons/google.png",
                           width: 24,
                         ),
-                        label: const Text(
-                          "Continue with Google",
-                          style: TextStyle(
+                        label: Text(
+                          L10n.authContinueWithGoogle(),
+                          style: const TextStyle(
                             color: Colors.black87,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -412,9 +415,9 @@ class _AuthScreenState extends State<AuthScreen> {
                               builder: (_) => const SignUpScreen()),
                         );
                       },
-                      child: const Text(
-                        "Create an account",
-                        style: TextStyle(color: Colors.white),
+                      child: Text(
+                        L10n.authCreateAccount(),
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                   ),
