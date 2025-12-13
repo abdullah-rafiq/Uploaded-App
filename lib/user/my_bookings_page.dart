@@ -7,7 +7,7 @@ import 'package:flutter_application_1/models/booking.dart';
 import 'package:flutter_application_1/models/service.dart';
 import 'package:flutter_application_1/services/booking_service.dart';
 import 'package:flutter_application_1/services/service_catalog_service.dart';
-import 'package:flutter_application_1/user/payment_page.dart';
+import 'package:flutter_application_1/common/payment_page.dart';
 import 'package:flutter_application_1/user/booking_detail_page.dart';
 import 'package:flutter_application_1/localized_strings.dart';
 

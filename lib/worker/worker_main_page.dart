@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'package:flutter_application_1/user/messages_page.dart';
+import 'package:flutter_application_1/common/messages_page.dart';
 import 'package:flutter_application_1/common/profile_page.dart';
 import 'package:flutter_application_1/common/app_bottom_nav.dart';
 import 'package:flutter_application_1/localized_strings.dart';

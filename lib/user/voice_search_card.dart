@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import 'package:flutter_application_1/common/ui_helpers.dart';
 import 'package:flutter_application_1/user/category_search_page.dart';
 
 class VoiceSearchCard extends StatefulWidget {
@@ -26,16 +27,15 @@ class _VoiceSearchCardState extends State<VoiceSearchCard> {
       final available = await _speech.initialize(
         onStatus: (status) {},
         onError: (error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Speech error: ${error.errorMsg}')),
+          UIHelpers.showSnack(
+            context,
+            'Speech error: ${error.errorMsg}',
           );
         },
       );
 
       if (!available) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Speech recognition not available')),
-        );
+        UIHelpers.showSnack(context, 'Speech recognition not available');
         return;
       }
 
@@ -60,9 +60,7 @@ class _VoiceSearchCardState extends State<VoiceSearchCard> {
       );
     } catch (e) {
       setState(() => _isListening = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not start voice search: $e')),
-      );
+      UIHelpers.showSnack(context, 'Could not start voice search: $e');
     }
   }
 

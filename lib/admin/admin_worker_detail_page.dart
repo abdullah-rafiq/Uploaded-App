@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/models/booking.dart';
 import 'package:flutter_application_1/models/review.dart';
+import 'package:flutter_application_1/controllers/admin_worker_controller.dart';
+import 'package:flutter_application_1/common/section_card.dart';
 
 class AdminWorkerDetailPage extends StatelessWidget {
   final AppUser worker;
@@ -238,11 +240,12 @@ class AdminWorkerDetailPage extends StatelessWidget {
                       icon: const Icon(Icons.check),
                       label: const Text('Pass'),
                       onPressed: () async {
-                        await _updateDocStatus(
+                        await AdminWorkerController.updateDocumentStatus(
                           context,
-                          data,
-                          fieldStatusKey,
-                          'approved',
+                          workerId: worker.id,
+                          currentData: data,
+                          statusField: fieldStatusKey,
+                          newStatus: 'approved',
                         );
                       },
                     ),
@@ -256,11 +259,12 @@ class AdminWorkerDetailPage extends StatelessWidget {
                       ),
                       label: const Text('Resubmit'),
                       onPressed: () async {
-                        await _updateDocStatus(
+                        await AdminWorkerController.updateDocumentStatus(
                           context,
-                          data,
-                          fieldStatusKey,
-                          'rejected',
+                          workerId: worker.id,
+                          currentData: data,
+                          statusField: fieldStatusKey,
+                          newStatus: 'rejected',
                         );
                       },
                     ),
@@ -495,84 +499,9 @@ class AdminWorkerDetailPage extends StatelessWidget {
     );
   }
 
-  Future<void> _updateDocStatus(
-    BuildContext context,
-    Map<String, dynamic> currentData,
-    String statusField,
-    String newStatus,
-  ) async {
-    try {
-      final Map<String, String> statuses = {
-        'cnicFrontStatus': statusField == 'cnicFrontStatus'
-            ? newStatus
-            : (currentData['cnicFrontStatus'] as String? ?? 'pending'),
-        'cnicBackStatus': statusField == 'cnicBackStatus'
-            ? newStatus
-            : (currentData['cnicBackStatus'] as String? ?? 'pending'),
-        'selfieStatus': statusField == 'selfieStatus'
-            ? newStatus
-            : (currentData['selfieStatus'] as String? ?? 'pending'),
-        'shopStatus': statusField == 'shopStatus'
-            ? newStatus
-            : (currentData['shopStatus'] as String? ?? 'pending'),
-      };
-
-      String overall;
-      if (statuses.values.every((s) => s == 'approved')) {
-        overall = 'approved';
-      } else if (statuses.values.any((s) => s == 'rejected')) {
-        overall = 'rejected';
-      } else {
-        overall = 'pending';
-      }
-
-      final updates = <String, dynamic>{
-        statusField: newStatus,
-        'verificationStatus': overall,
-      };
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(worker.id)
-          .update(updates);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newStatus == 'approved'
-                  ? 'Document marked as passed.'
-                  : 'Document marked for resubmission.',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update status: $e')),
-        );
-      }
-    }
-  }
-
   Widget _sectionCard(BuildContext context,
       {required String title, required Widget child}) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

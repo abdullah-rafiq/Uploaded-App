@@ -7,8 +7,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_application_1/models/booking.dart';
 import 'package:flutter_application_1/services/booking_service.dart';
 import 'package:flutter_application_1/services/user_service.dart';
-import 'package:flutter_application_1/user/payment_page.dart';
-import 'package:flutter_application_1/user/chat_page.dart';
+import 'package:flutter_application_1/common/payment_page.dart' as payment_page;
+import 'package:flutter_application_1/common/chat_page.dart' as chat_page;
+import 'package:flutter_application_1/common/ui_helpers.dart';
 
 class BookingDetailPage extends StatelessWidget {
   final BookingModel booking;
@@ -189,7 +190,7 @@ class BookingDetailPage extends StatelessWidget {
                         ? () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => PaymentPage(booking: booking),
+                                builder: (_) => payment_page.PaymentPage(booking: booking),
                               ),
                             );
                           }
@@ -206,10 +207,9 @@ class BookingDetailPage extends StatelessWidget {
                         BookingStatus.cancelled,
                       );
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Booking cancelled (demo only).'),
-                          ),
+                        UIHelpers.showSnack(
+                          context,
+                          'Booking cancelled (demo only).',
                         );
                         Navigator.of(context).pop();
                       }
@@ -264,16 +264,15 @@ Future<void> _openChatForBooking(
 ) async {
   final current = FirebaseAuth.instance.currentUser;
   if (current == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please log in to send messages.')),
-    );
+    UIHelpers.showSnack(context, 'Please log in to send messages.');
     return;
   }
 
   final providerId = booking.providerId;
   if (providerId == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('No provider assigned to this booking.')),
+    UIHelpers.showSnack(
+      context,
+      'No provider assigned to this booking.',
     );
     return;
   }
@@ -295,16 +294,14 @@ Future<void> _openChatForBooking(
   final otherId = current.uid == customerId ? providerId : customerId;
   final other = await UserService.instance.getById(otherId);
   if (other == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not load user for chat.')),
-    );
+    UIHelpers.showSnack(context, 'Could not load user for chat.');
     return;
   }
 
   if (!context.mounted) return;
   Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => ChatPage(
+      builder: (_) => chat_page.ChatPage(
         chatId: chatId,
         otherUser: other,
       ),

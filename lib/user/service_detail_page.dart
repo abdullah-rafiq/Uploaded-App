@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/booking.dart';
 import 'package:flutter_application_1/models/service.dart';
 import 'package:flutter_application_1/services/booking_service.dart';
+import 'package:flutter_application_1/common/ui_helpers.dart';
 
 class ServiceDetailPage extends StatefulWidget {
   final ServiceModel service;
@@ -57,16 +58,15 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
   Future<void> _confirmBooking() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in again to book a service.')),
+      UIHelpers.showSnack(
+        context,
+        'Please log in again to book a service.',
       );
       return;
     }
 
     if (_selectedDateTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select date and time.')),
-      );
+      UIHelpers.showSnack(context, 'Please select date and time.');
       return;
     }
 
@@ -90,14 +90,13 @@ class _ServiceDetailPageState extends State<ServiceDetailPage> {
       await BookingService.instance.createBooking(booking);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Booking created successfully.')),
-      );
+      UIHelpers.showSnack(context, 'Booking created successfully.');
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not create booking. Try again.')),
+      UIHelpers.showSnack(
+        context,
+        'Could not create booking. Try again.',
       );
     } finally {
       if (mounted) {

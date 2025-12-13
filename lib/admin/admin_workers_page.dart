@@ -6,6 +6,7 @@ import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/models/review.dart';
 import 'package:flutter_application_1/services/worker_ranking_service.dart';
 import 'package:flutter_application_1/admin/admin_worker_detail_page.dart';
+import 'package:flutter_application_1/controllers/admin_worker_controller.dart';
 
 class AdminWorkersPage extends StatelessWidget {
   const AdminWorkersPage({super.key});
@@ -260,7 +261,14 @@ class AdminWorkersPage extends StatelessWidget {
                                         ),
                                         label: const Text('Reject'),
                                         onPressed: () async {
-                                          await _rejectWorker(context, worker.id);
+                                          final reason = await AdminWorkerController
+                                              .promptRejectReason(context);
+                                          if (reason == null) return;
+                                          await AdminWorkerController.rejectWorker(
+                                            context,
+                                            worker.id,
+                                            reason: reason,
+                                          );
                                         },
                                       ),
                                     ),
@@ -276,7 +284,10 @@ class AdminWorkersPage extends StatelessWidget {
                                         icon: const Icon(Icons.check),
                                         label: const Text('Approve'),
                                         onPressed: () async {
-                                          await _approveWorker(context, worker.id);
+                                          await AdminWorkerController.approveWorker(
+                                            context,
+                                            worker.id,
+                                          );
                                         },
                                       ),
                                     ),
@@ -354,75 +365,4 @@ Future<List<_WorkerWithScore>> _loadWorkersWithScore(
 
   list.sort((a, b) => b.score.compareTo(a.score));
   return list;
-}
-
-Future<void> _approveWorker(BuildContext context, String workerId) async {
-  try {
-    await FirebaseFirestore.instance.collection('users').doc(workerId).update({
-      'verified': true,
-      'verificationStatus': 'approved',
-    });
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Worker approved successfully.')),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not approve worker: $e')),
-      );
-    }
-  }
-}
-
-Future<void> _rejectWorker(BuildContext context, String workerId) async {
-  final controller = TextEditingController();
-
-  final reason = await showDialog<String?>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Reject worker'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Reason (optional)',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Reject'),
-          ),
-        ],
-      );
-    },
-  );
-
-  if (reason == null) return;
-
-  try {
-    await FirebaseFirestore.instance.collection('users').doc(workerId).update({
-      'verificationStatus': 'rejected',
-      'verificationReason': reason.isEmpty ? null : reason,
-    });
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Worker rejected.')),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not reject worker: $e')),
-      );
-    }
-  }
 }

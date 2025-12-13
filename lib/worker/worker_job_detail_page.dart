@@ -1,14 +1,12 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/models/booking.dart';
-import 'package:flutter_application_1/services/booking_service.dart';
 import 'package:flutter_application_1/services/user_service.dart';
-import 'package:flutter_application_1/user/chat_page.dart';
+import 'package:flutter_application_1/common/section_card.dart';
+import 'package:flutter_application_1/controllers/worker_job_controller.dart';
 
 class WorkerJobDetailPage extends StatelessWidget {
   final BookingModel booking;
@@ -36,19 +34,7 @@ class WorkerJobDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.shadowColor.withOpacity(0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
+            SectionCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -313,163 +299,45 @@ class WorkerJobDetailPage extends StatelessWidget {
     }
   }
 
-  Future<void> _handlePrimaryAction(BuildContext context) async {
-    final current = FirebaseAuth.instance.currentUser;
-    if (current == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in to update job status.')),
-        );
-      }
-      return;
-    }
-
-    final provider = await UserService.instance.getById(current.uid);
-    if (provider == null || !provider.verified) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Your account is not verified yet. Complete verification before accepting or starting jobs.',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    String? newStatus;
-    switch (booking.status) {
-      case BookingStatus.requested:
-        newStatus = BookingStatus.accepted;
-        break;
-      case BookingStatus.accepted:
-      case BookingStatus.onTheWay:
-        newStatus = BookingStatus.inProgress;
-        break;
+  Color _statusColor(String status) {
+    switch (status) {
+      case BookingStatus.completed:
+        return Colors.green;
+      case BookingStatus.cancelled:
+        return Colors.redAccent;
       case BookingStatus.inProgress:
-        newStatus = BookingStatus.completed;
-        break;
+      case BookingStatus.onTheWay:
+        return Colors.orange;
+      case BookingStatus.accepted:
+        return Colors.blueAccent;
       default:
-        break;
+        return Colors.blueGrey;
     }
+  }
 
-    if (newStatus == null) return;
+  String _formatDateTime(DateTime? dt) {
+    if (dt == null) return 'Not set';
+    final local = dt.toLocal();
+    final date = '${local.year.toString().padLeft(4, '0')}-'
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
+    final time = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    return '$date • $time';
+  }
 
-    try {
-      await BookingService.instance.updateStatus(booking.id, newStatus);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Job status updated to $newStatus.')),
-        );
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update job status: $e')),
-        );
-      }
-    }
+  Future<void> _handlePrimaryAction(BuildContext context) async {
+    await WorkerJobController.handlePrimaryAction(context, booking);
   }
 
   Future<void> _handleSecondaryAction(BuildContext context) async {
-    try {
-      await BookingService.instance
-          .updateStatus(booking.id, BookingStatus.cancelled);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Job cancelled.')),
-        );
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not cancel job: $e')),
-        );
-      }
-    }
-  }
-}
-
-Color _statusColor(String status) {
-  switch (status) {
-    case BookingStatus.completed:
-      return Colors.green;
-    case BookingStatus.cancelled:
-      return Colors.redAccent;
-    case BookingStatus.inProgress:
-    case BookingStatus.onTheWay:
-      return Colors.orange;
-    case BookingStatus.accepted:
-      return Colors.blueAccent;
-    default:
-      return Colors.blueGrey;
-  }
-}
-
-String _formatDateTime(DateTime? dt) {
-  if (dt == null) return 'Not set';
-  final local = dt.toLocal();
-  final date = '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}-'
-      '${local.day.toString().padLeft(2, '0')}';
-  final time = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-  return '$date • $time';
-}
-
-Future<void> _openChatForJob(
-  BuildContext context,
-  BookingModel booking,
-) async {
-  final current = FirebaseAuth.instance.currentUser;
-  if (current == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please log in to send messages.')),
-    );
-    return;
+    await WorkerJobController.handleSecondaryAction(context, booking);
   }
 
-  final providerId = booking.providerId;
-  if (providerId == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('No provider assigned to this job.')),
-    );
-    return;
+  Future<void> _openChatForJob(
+    BuildContext context,
+    BookingModel booking,
+  ) async {
+    await WorkerJobController.openChatForJob(context, booking);
   }
-
-  final customerId = booking.customerId;
-  final ids = [customerId, providerId]..sort();
-  final chatId = ids.join('_');
-
-  final chatRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
-
-  await chatRef.set(
-    {
-      'participants': ids,
-      'updatedAt': FieldValue.serverTimestamp(),
-    },
-    SetOptions(merge: true),
-  );
-
-  final otherId = current.uid == customerId ? providerId : customerId;
-  final other = await UserService.instance.getById(otherId);
-  if (other == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not load user for chat.')),
-    );
-    return;
-  }
-
-  if (!context.mounted) return;
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => ChatPage(
-        chatId: chatId,
-        otherUser: other,
-      ),
-    ),
-  );
 }
 

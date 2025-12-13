@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_application_1/models/app_user.dart';
+import 'package:flutter_application_1/controllers/admin_worker_controller.dart';
 
 class AdminPendingWorkersPage extends StatelessWidget {
   const AdminPendingWorkersPage({super.key});
@@ -153,7 +154,14 @@ class AdminPendingWorkersPage extends StatelessWidget {
                                 icon: const Icon(Icons.close, color: Colors.red),
                                 label: const Text('Reject'),
                                 onPressed: () async {
-                                  await _rejectWorker(context, worker.id);
+                                  final reason = await AdminWorkerController
+                                      .promptRejectReason(context);
+                                  if (reason == null) return;
+                                  await AdminWorkerController.rejectWorker(
+                                    context,
+                                    worker.id,
+                                    reason: reason,
+                                  );
                                 },
                               ),
                             ),
@@ -163,7 +171,10 @@ class AdminPendingWorkersPage extends StatelessWidget {
                                 icon: const Icon(Icons.check),
                                 label: const Text('Approve'),
                                 onPressed: () async {
-                                  await _approveWorker(context, worker.id);
+                                  await AdminWorkerController.approveWorker(
+                                    context,
+                                    worker.id,
+                                  );
                                 },
                               ),
                             ),
@@ -179,76 +190,5 @@ class AdminPendingWorkersPage extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-Future<void> _approveWorker(BuildContext context, String workerId) async {
-  try {
-    await FirebaseFirestore.instance.collection('users').doc(workerId).update({
-      'verified': true,
-      'verificationStatus': 'approved',
-    });
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Worker approved successfully.')),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not approve worker: $e')),
-      );
-    }
-  }
-}
-
-Future<void> _rejectWorker(BuildContext context, String workerId) async {
-  final controller = TextEditingController();
-
-  final reason = await showDialog<String?>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Reject worker'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Reason (optional)',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Reject'),
-          ),
-        ],
-      );
-    },
-  );
-
-  if (reason == null) return;
-
-  try {
-    await FirebaseFirestore.instance.collection('users').doc(workerId).update({
-      'verificationStatus': 'rejected',
-      'verificationReason': reason.isEmpty ? null : reason,
-    });
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Worker rejected.')),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not reject worker: $e')),
-      );
-    }
   }
 }

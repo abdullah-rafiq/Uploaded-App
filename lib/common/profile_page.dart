@@ -2,19 +2,17 @@
 
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/services/user_service.dart';
+import 'package:flutter_application_1/controllers/profile_controller.dart';
+import 'package:flutter_application_1/common/ui_helpers.dart';
 import 'package:flutter_application_1/worker/worker_verification_page.dart';
 
-import '../user/wallet_page.dart';
+import 'wallet_page.dart';
 import '../user/my_bookings_page.dart';
 import '../localized_strings.dart';
 import '../dev_seed.dart';
@@ -136,8 +134,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   minHeight: 28,
                                 ),
                                 icon: const Icon(Icons.add_a_photo, size: 16),
-                                onPressed: () =>
-                                    _changeProfileImage(context, current.uid),
+                                onPressed: () => ProfileController
+                                    .changeProfileImage(context, current.uid),
                               ),
                             ),
                           ],
@@ -173,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                           ),
                                         );
                                       } else {
-                                        _startPhoneVerification(
+                                        ProfileController.startPhoneVerification(
                                           context,
                                           profile,
                                         );
@@ -306,18 +304,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         try {
                           await seedDemoData();
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Demo data seeded successfully.'),
-                            ),
+                          UIHelpers.showSnack(
+                            context,
+                            'Demo data seeded successfully.',
                           );
                         } catch (e) {
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text('Failed to seed demo data: $e'),
-                            ),
+                          UIHelpers.showSnack(
+                            context,
+                            'Failed to seed demo data: $e',
                           );
                         }
                       },
@@ -527,129 +522,31 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () async {
-                      try {
-                        final serviceEnabled =
-                            await Geolocator.isLocationServiceEnabled();
-                        if (!serviceEnabled) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Please enable location services to use this feature.'),
-                            ),
-                          );
-                          return;
+                      final result = await ProfileController
+                          .updateLocationFromCurrentPosition(
+                        context,
+                        profile.id,
+                      );
+                      if (result == null) return;
+
+                      setState(() {
+                        if (result.city != null &&
+                            (result.city == 'Lahore' ||
+                                result.city == 'Islamabad' ||
+                                result.city == 'Karachi')) {
+                          selectedCity = result.city;
                         }
 
-                        var permission = await Geolocator.checkPermission();
-                        if (permission == LocationPermission.denied) {
-                          permission = await Geolocator.requestPermission();
+                        if (result.town != null &&
+                            result.town!.isNotEmpty) {
+                          townController.text = result.town!;
                         }
 
-                        if (permission == LocationPermission.denied ||
-                            permission == LocationPermission.deniedForever) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Location permission denied. Please enable it in settings.'),
-                            ),
-                          );
-                          return;
+                        if (result.addressLine1 != null &&
+                            result.addressLine1!.trim().isNotEmpty) {
+                          addressController.text = result.addressLine1!;
                         }
-
-                        final position = await Geolocator.getCurrentPosition(
-                          desiredAccuracy: LocationAccuracy.high,
-                        );
-
-                        String? city;
-                        String? town;
-                        String? addressLine1;
-                        try {
-                          final placemarks = await placemarkFromCoordinates(
-                            position.latitude,
-                            position.longitude,
-                          );
-
-                          if (placemarks.isNotEmpty) {
-                            final p = placemarks.first;
-
-                            city = p.locality ??
-                                p.subAdministrativeArea ??
-                                p.administrativeArea;
-                            town = p.subLocality ?? p.locality;
-
-                            addressLine1 = p.street;
-                            if (addressLine1 == null ||
-                                addressLine1.trim().isEmpty) {
-                              addressLine1 = p.name;
-                            }
-
-                            final lowerCity = city?.toLowerCase() ?? '';
-                            if (lowerCity.contains('lahore')) {
-                              city = 'Lahore';
-                            } else if (lowerCity.contains('islamabad')) {
-                              city = 'Islamabad';
-                            } else if (lowerCity.contains('karachi')) {
-                              city = 'Karachi';
-                            }
-                          }
-                        } catch (_) {
-                          // Ignore reverse geocoding failures; still save raw location.
-                        }
-
-                        final update = <String, dynamic>{
-                          'locationLat': position.latitude,
-                          'locationLng': position.longitude,
-                        };
-
-                        if (city != null && city.isNotEmpty) {
-                          update['city'] = city;
-                        }
-
-                        if (town != null && town.isNotEmpty) {
-                          update['town'] = town;
-                        }
-
-                        if (addressLine1 != null &&
-                            addressLine1.trim().isNotEmpty) {
-                          update['addressLine1'] = addressLine1;
-                        }
-
-                        await UserService.instance.updateUser(profile.id, update);
-
-                        setState(() {
-                          if (city != null && city.isNotEmpty) {
-                            if (city == 'Lahore' ||
-                                city == 'Islamabad' ||
-                                city == 'Karachi') {
-                              selectedCity = city;
-                            }
-                          }
-
-                          if (town != null && town.isNotEmpty) {
-                            townController.text = town;
-                          }
-
-                          if (addressLine1 != null &&
-                              addressLine1.trim().isNotEmpty) {
-                            addressController.text = addressLine1;
-                          }
-                        });
-
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Location and city/town updated from your current position.'),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Could not fetch location: $e'),
-                          ),
-                        );
-                      }
+                      });
                     },
                     icon: const Icon(Icons.my_location),
                     label: const Text('Use current location'),
@@ -671,9 +568,9 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
                             final phone = phoneController.text.trim();
 
                             if (name.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Name cannot be empty.')),
+                              UIHelpers.showSnack(
+                                context,
+                                'Name cannot be empty.',
                               );
                               return;
                             }
@@ -692,18 +589,14 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
                               });
 
                               Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content:
-                                      Text('Profile updated successfully.'),
-                                ),
+                              UIHelpers.showSnack(
+                                context,
+                                'Profile updated successfully.',
                               );
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      Text('Failed to update profile: $e'),
-                                ),
+                              UIHelpers.showSnack(
+                                context,
+                                'Failed to update profile: $e',
                               );
                             }
                           },
@@ -723,12 +616,9 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
                       final email = user?.email;
 
                       if (email == null || email.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'No email found for this account. You may be using a social login.',
-                            ),
-                          ),
+                        UIHelpers.showSnack(
+                          context,
+                          'No email found for this account. You may be using a social login.',
                         );
                         return;
                       }
@@ -737,21 +627,15 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
                         await FirebaseAuth.instance
                             .sendPasswordResetEmail(email: email);
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Password reset email sent. Please check your inbox.',
-                            ),
-                          ),
+                        UIHelpers.showSnack(
+                          context,
+                          'Password reset email sent. Please check your inbox.',
                         );
                       } catch (e) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Could not send reset email: $e',
-                            ),
-                          ),
+                        UIHelpers.showSnack(
+                          context,
+                          'Could not send reset email: $e',
                         );
                       }
                     },
@@ -765,87 +649,7 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
                     title: const Text('Delete account'),
                     subtitle: const Text(
                         'Permanently remove your account and data.'),
-                    onTap: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Delete account'),
-                            content: const Text(
-                              'This will permanently delete your account and data. This action cannot be undone.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(true),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.redAccent,
-                                ),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-
-                      if (confirm != true) return;
-
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'You must be logged in to delete account.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      try {
-                        final uid = user.uid;
-                        await FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(uid)
-                            .delete();
-
-                        await user.delete();
-
-                        if (!context.mounted) return;
-                        Navigator.of(context).pop();
-                        Navigator.of(context).pop();
-                      } on FirebaseAuthException catch (e) {
-                        if (!context.mounted) return;
-                        if (e.code == 'requires-recent-login') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Please log in again and then try deleting your account.',
-                              ),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Could not delete account: ${e.code}'),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Could not delete account: $e'),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => ProfileController.deleteAccount(context),
                   ),
                 ],
               ),
@@ -855,242 +659,6 @@ Future<void> _showEditProfileDialog(BuildContext context, AppUser profile) async
       );
     },
   );
-}
-
-Future<void> _startPhoneVerification(
-    BuildContext context, AppUser profile) async {
-  final phone = profile.phone?.trim();
-
-  if (phone == null || phone.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please add your phone number in Edit profile first.'),
-      ),
-    );
-    return;
-  }
-
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('You must be logged in to verify.')),
-    );
-    return;
-  }
-
-  try {
-    await FirebaseAuth.instance.verifyPhoneNumber(
-      phoneNumber: phone,
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        try {
-          await user.linkWithCredential(credential);
-        } catch (_) {
-          // Ignore link errors; user might already be linked.
-        }
-
-        await UserService.instance
-            .updateUser(profile.id, {'verified': true});
-
-        if (context.mounted) {
-          // Simple analytics/logging
-          // ignore: avoid_print
-          print('PHONE_VERIFIED_AUTO uid=${profile.id}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Phone verified successfully.')),
-          );
-        }
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Verification failed: ${e.message}')),
-        );
-      },
-      codeSent: (String verificationId, int? resendToken) async {
-        await _showOtpBottomSheet(
-          context: context,
-          verificationId: verificationId,
-          profile: profile,
-        );
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        // Optional: you can inform the user that auto-retrieval timed out.
-      },
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Could not start phone verification: $e')),
-    );
-  }
-}
-
-Future<void> _showOtpBottomSheet({
-  required BuildContext context,
-  required String verificationId,
-  required AppUser profile,
-}) async {
-  final codeController = TextEditingController();
-
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: bottomInset + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Enter OTP',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'We\'ve sent a 6-digit code to your phone. Enter it below to verify your account.',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: codeController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: const InputDecoration(
-                labelText: 'OTP code',
-                prefixIcon: Icon(Icons.sms_outlined),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final code = codeController.text.trim();
-                  if (code.length < 6) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please enter the 6-digit code.'),
-                      ),
-                    );
-                    return;
-                  }
-
-                  try {
-                    final credential = PhoneAuthProvider.credential(
-                      verificationId: verificationId,
-                      smsCode: code,
-                    );
-
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('You must be logged in to verify.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    try {
-                      await user.linkWithCredential(credential);
-                    } catch (_) {
-                      // Ignore link errors; user might already be linked or signed in.
-                    }
-
-                    await UserService.instance
-                        .updateUser(profile.id, {'verified': true});
-
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                      // Simple analytics/logging
-                      // ignore: avoid_print
-                      print('PHONE_VERIFIED_OTP uid=${profile.id}');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Phone verified successfully.'),
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Invalid code: $e')),
-                    );
-                  }
-                },
-                child: const Text('Verify'),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-Future<void> _changeProfileImage(BuildContext context, String uid) async {
-  try {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    final fileName = picked.name;
-
-    // Show loading SnackBar
-    final loadingSnack = SnackBar(
-      content: Row(
-        children: const [
-          CircularProgressIndicator(),
-          SizedBox(width: 16),
-          Text('Uploading profile picture...')
-        ],
-      ),
-      duration: const Duration(minutes: 1), // will hide manually
-    );
-    ScaffoldMessenger.of(context).showSnackBar(loadingSnack);
-
-    // Upload via UserService (Cloudinary under the hood) and update Firestore
-    final uploadResult = await UserService.instance.uploadProfileImage(
-      uid,
-      bytes,
-      fileName,
-    );
-    await UserService.instance.updateProfileImageUrl(uid, uploadResult.secureUrl);
-    // Optionally store Cloudinary public_id for future management
-    await UserService.instance.updateUser(uid, {
-      'profileImagePublicId': uploadResult.publicId,
-    });
-
-    // Hide loading SnackBar and show success
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile picture updated.')),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Could not update profile picture: $e')),
-    );
-  }
 }
 
 class _QuickAction extends StatelessWidget {

@@ -29,7 +29,7 @@ service cloud.firestore {
     && request.resource.data.verificationStatus == resource.data.verificationStatus
     && request.resource.data.verificationReason == resource.data.verificationReason;
 
-  // User creates their own doc OR admin creates any doc (for seeding/admin tools)
+  // User creates their own doc OR admin creates any doc (for admin tools)
   allow create: if isSignedIn()
     && (uid() == userId || isAdmin());
 
@@ -47,7 +47,7 @@ service cloud.firestore {
 match /reviews/{reviewId} {
   allow read: if true;
 
-  // Customer OR admin can create (admin needed for seeding)
+  // Customer OR admin can create (admin for moderation/tools)
   allow create: if isSignedIn()
     && (request.resource.data.customerId == uid() || isAdmin());
 

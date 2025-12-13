@@ -3,18 +3,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 
 import 'package:flutter_application_1/models/app_user.dart';
 import 'package:flutter_application_1/models/category.dart';
 import 'package:flutter_application_1/services/service_catalog_service.dart';
 import 'package:flutter_application_1/services/user_service.dart';
+import 'package:flutter_application_1/controllers/profile_controller.dart';
+import 'package:flutter_application_1/common/section_card.dart';
 import 'package:flutter_application_1/user/category_services_page.dart';
 import 'package:flutter_application_1/user/my_bookings_page.dart';
 import 'package:flutter_application_1/common/profile_page.dart';
-import 'package:flutter_application_1/user/messages_page.dart';
-import 'package:flutter_application_1/user/notifications_page.dart';
+import 'package:flutter_application_1/common/messages_page.dart';
+import 'package:flutter_application_1/common/notifications_page.dart';
 import 'package:flutter_application_1/common/app_bottom_nav.dart';
 import 'package:flutter_application_1/user/top_workers_section.dart';
 import 'package:flutter_application_1/user/featured_providers_section.dart';
@@ -71,108 +71,17 @@ class _MainPageState extends State<MainPage> {
       return;
     }
 
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enable location services to use this feature.'),
-          ),
-        );
-        return;
-      }
+    final result = await ProfileController.updateLocationFromCurrentPosition(
+      context,
+      current.uid,
+    );
 
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
+    if (!mounted || result == null) return;
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location permission denied. Please enable it in settings.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      String? city;
-      String? town;
-      String? addressLine1;
-
-      try {
-        final placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          final p = placemarks.first;
-
-          city = p.locality ?? p.subAdministrativeArea ?? p.administrativeArea;
-          town = p.subLocality ?? p.locality;
-
-          addressLine1 = p.street;
-          if (addressLine1 == null || addressLine1.trim().isEmpty) {
-            addressLine1 = p.name;
-          }
-
-          final lowerCity = city?.toLowerCase() ?? '';
-          if (lowerCity.contains('lahore')) {
-            city = 'Lahore';
-          } else if (lowerCity.contains('islamabad')) {
-            city = 'Islamabad';
-          } else if (lowerCity.contains('karachi')) {
-            city = 'Karachi';
-          }
-        }
-      } catch (_) {}
-
-      final update = <String, dynamic>{
-        'locationLat': position.latitude,
-        'locationLng': position.longitude,
-      };
-
-      if (city != null && city.isNotEmpty) {
-        update['city'] = city;
-      }
-
-      if (town != null && town.isNotEmpty) {
-        update['town'] = town;
-      }
-
-      if (addressLine1 != null && addressLine1.trim().isNotEmpty) {
-        update['addressLine1'] = addressLine1;
-      }
-
-      await UserService.instance.updateUser(current.uid, update);
-
-      if (!mounted) return;
-
-      final newCity = city;
-      if (newCity != _currentCity) {
-        setState(() {
-          _currentCity = newCity;
-        });
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Location updated from your current position.'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not fetch location: $e')),
-      );
+    if (result.city != null && result.city != _currentCity) {
+      setState(() {
+        _currentCity = result.city;
+      });
     }
   }
 
@@ -511,20 +420,9 @@ class _MainPageState extends State<MainPage> {
   }
 
   Widget _buildUpcomingBookingsCard() {
-    return Container(
+    return SectionCard(
       margin: const EdgeInsets.symmetric(horizontal: 18),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
         children: [
           const ListTile(
@@ -561,6 +459,28 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // Simple shared section header for this page only
+  Widget _buildSectionHeader(String title) {
+    final textStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
+            ) ??
+        const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+        );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
+      child: Text(
+        title,
+        style: textStyle,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
@@ -577,63 +497,15 @@ class _MainPageState extends State<MainPage> {
                 _buildPromoCarousel(),
                 _buildSearchCard(context),
                 const SizedBox(height: 6),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
-                  child: Text(
-                    L10n.mainCategoriesTitle(),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                        ) ??
-                        const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                        ),
-                  ),
-                ),
+                _buildSectionHeader(L10n.mainCategoriesTitle()),
                 _buildCategories(),
                 const SizedBox(height: 12),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
-                  child: Text(
-                    L10n.mainFeaturedProvidersTitle(),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                        ) ??
-                        const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                        ),
-                  ),
-                ),
+                _buildSectionHeader(L10n.mainFeaturedProvidersTitle()),
                 const FeaturedProvidersSection(),
                 const SizedBox(height: 16),
                 const TopWorkersSection(),
                 const SizedBox(height: 16),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18.0, vertical: 8),
-                  child: Text(
-                    L10n.mainUpcomingBookingsTitle(),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                        ) ??
-                        const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.1,
-                        ),
-                  ),
-                ),
+                _buildSectionHeader(L10n.mainUpcomingBookingsTitle()),
                 _buildUpcomingBookingsCard(),
                 const SizedBox(height: 24),
               ],
